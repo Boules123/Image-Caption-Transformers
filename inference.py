@@ -14,7 +14,7 @@ def test(test_loader, config):
         images = images
         captions = captions
         
-        generated = model.generate(images, max_len=128)
+        generated = model.generate(images, max_len=32)
         
         for i in range(captions.size(0)):
             ref_tokens = captions[i].cpu().tolist()

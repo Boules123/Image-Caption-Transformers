@@ -34,46 +34,6 @@ Trained and evaluated on the **Flickr8k** dataset, this project demonstrates an 
 
 ---
 
-## Architecture
-
-The model follows a classic **encoder–decoder** paradigm, augmented with cross-attention so every decoder layer can attend directly to the image representation.
-
-```
- ┌──────────────────────────────────────────────────────────────────┐
- │                        IMAGE CAPTION MODEL                       │
- │                                                                  │
- │   ┌──────────────┐          ┌─────────────────────────────────┐  │
- │   │  Input Image │          │       Transformer Decoder       │  │
- │   │  (3×256×256) │          │                                 │  │
- │   └──────┬───────┘          │  ┌───────────────────────────┐  │  │
- │          │                  │  │   Token + Pos Embedding   │  │  │
- │   ┌──────▼───────┐          │  └────────────┬──────────────┘  │  │
- │   │  CNN Encoder │          │               │                 │  │
- │   │  (ResNet50)  │          │  ┌────────────▼──────────────┐  │  │
- │   │              │          │  │  Causal Self-Attention    │  │  │
- │   │  Frozen      │          │  │  (masked, causal)         │  │  │
- │   │  Backbone    │          │  └────────────┬──────────────┘  │  │
- │   │  + Linear    │──────────┼──────────────►│ Cross-Attention │  │
- │   │  Projection  │          │  ┌────────────┴──────────────┐  │  │
- │   │              │  img_emb │  │  Cross-Attention          │  │  │
- │   │  (B, 2048)   │          │  │  (query=text, kv=image)   │  │  │
- │   │      ↓       │          │  └────────────┬──────────────┘  │  │
- │   │  (B, 512)    │          │               │  × 6 layers     │  │
- │   └──────────────┘          │  ┌────────────▼──────────────┐  │  │
- │                             │  │  Feed-Forward (MLP+GELU)  │  │  │
- │                             │  └────────────┬──────────────┘  │  │
- │                             │               │                 │  │
- │                             │  ┌────────────▼──────────────┐  │  │
- │                             │  │    LM Head (tied weights) │  │  │
- │                             │  └────────────┬──────────────┘  │  │
- │                             └───────────────┼─────────────────┘  │
- │                                             │                    │
- │                                    ┌────────▼────────┐           │
- │                                    │ Generated Token │           │
- │                                    │ Probabilities   │           │
- │                                    └─────────────────┘           │
- └──────────────────────────────────────────────────────────────────┘
-```
 
 ### Model Configuration
 
@@ -83,7 +43,7 @@ The model follows a classic **encoder–decoder** paradigm, augmented with cross
 | `n_layer` | 6 | Number of Transformer blocks |
 | `n_head` | 8 | Number of attention heads |
 | `encoder_dim` | 2048 | CNN output dimension |
-| `block_size` | 64 | Maximum caption length |
+| `block_size` | 128 | Maximum caption length |
 | `dropout` | 0.1 | Dropout rate |
 | `vocab_size` | dynamic | Built from training captions |
 
@@ -173,7 +133,7 @@ python train.py
 ```bash
 python train.py \
   --batch_size 64 \
-  --epochs 30 \
+  --epochs 15 \
   --lr 3e-4 \
   --data_dir /path/to/flickr8k
 ```
@@ -189,7 +149,7 @@ python train.py --resume checkpoints/checkpoint_epoch_10.pt
 | Argument | Default | Description |
 |---|---|---|
 | `--batch_size` | 64 | Batch size for training |
-| `--epochs` | 30 | Total number of training epochs |
+| `--epochs` | 15 | Total number of training epochs |
 | `--lr` | 3e-4 | Initial learning rate |
 | `--resume` | None | Path to checkpoint to resume from |
 | `--data_dir` | None | Override data directory |
@@ -230,11 +190,10 @@ The training script executes the following steps automatically:
 The model is evaluated on validation loss after each epoch. A typical training run looks like:
 
 ```
-Epoch  1/30 | Train Loss: 4.2310 | Val Loss: 3.9851 | LR: 0.000300
-Epoch  5/30 | Train Loss: 3.1204 | Val Loss: 3.0542 | LR: 0.000287
-Epoch 10/30 | Train Loss: 2.6731 | Val Loss: 2.7019 | LR: 0.000245
-Epoch 20/30 | Train Loss: 2.2481 | Val Loss: 2.4803 | LR: 0.000130
-Epoch 30/30 | Train Loss: 2.0943 | Val Loss: 2.3917 | LR: 0.000003
+Epoch  1/15 | Train Loss: 3.6507 | Val Loss: 3.0470 | LR: 0.000300
+Epoch  5/15 | Train Loss: 2.6328 | Val Loss: 2.6486 | LR: 0.000287
+Epoch 10/15 | Train Loss: 1.8316 | Val Loss: 2.4211 | LR: 0.000245
+Epoch 15/15 | Train Loss: 1.3141 | Val Loss: 2.4587 | LR: 0.000003
 ```
 
 ### BLEU Score
@@ -277,7 +236,7 @@ dropout     = 0.1
 ```python
 batch_size      = 32
 learning_rate   = 3e-4
-max_epochs      = 30
+max_epochs      = 15
 grad_clip       = 1.0
 grad_accum_steps = 1   # Effective batch = batch_size × grad_accum_steps
 lr_scheduler    = "cosine"   # "cosine" | "step"
